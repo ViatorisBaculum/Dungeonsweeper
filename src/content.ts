@@ -34,10 +34,45 @@ export function initialize(): void {
 	bind("reset", "click", () => gameInstance.resetGame());
 	bind("openLeaderboard", "click", () => showLeaderboard());
 	bind("debugLevelUp", "click", () => gameInstance.player.debugGainLevel());
+
+	// Automatisches Speichern bei jedem Klick ins Spielfeld
+	window.addEventListener("click", (e) => {
+		const app = document.getElementById("app");
+		if (app && app.contains(e.target as Node)) {
+			gameInstance.saveGameState();
+		}
+	});
+
+	// Automatisches Speichern beim Verlassen der Seite
+	window.addEventListener("beforeunload", () => {
+		gameInstance.saveGameState();
+	});
 }
 
 function showInitialModal(): void {
 	assert(settingsForm, "No settings template found");
+
+	// Prüfen, ob ein Save existiert
+	if (gameInstance.hasSavedGame()) {
+		const modal = new Modal(document.body, { cancelButton: true, confirmButton: true });
+		modal.setTitle("Spielstand laden?");
+		modal.setText("Es wurde ein gespeicherter Spielstand gefunden. Möchtest du diesen laden?");
+		modal.setConfirmAction(() => {
+			if (gameInstance.loadGameState()) {
+				toggle(menu);
+			} else {
+				alert("Fehler beim Laden des Spielstands.");
+			}
+		});
+		modal.setCancelAction(() => {
+			setTimeout(() => showNewGameModal(), 0);
+		});
+		return;
+	}
+	showNewGameModal();
+}
+
+function showNewGameModal(): void {
 	const modal = new Modal(document.body);
 	modal.setTitle("New Game")
 	modal.setSubTitle("Welcome to DungeonSweeper")
@@ -45,7 +80,7 @@ function showInitialModal(): void {
 		"This is a more elaborate version of MineSweeper with RPG elements such as classes, leveling and different enemies. Please choose your starting configuration."
 	)
 
-	modal.setSlotContent(settingsForm.innerHTML)
+	modal.setSlotContent(settingsForm!.innerHTML)
 	modal.setConfirmAction((): void => {
 		toggle(menu);
 		gameInstance.resetGame();

@@ -17,4 +17,20 @@ export enum CellType {
 	Boss
 };
 
-export type playerClasses = "Assassin" | "Warrior" | "Paladin" | "Mage";
+export type playerClasses = "Assassin" | "Mage" | "Paladin" | "Warrior";
+
+export interface SavedCell {
+	type: CellType;
+	value?: number;
+	isClicked: boolean;
+	isFlagged: boolean;
+}
+
+export interface PlayerState {
+	className: string;
+	level: number;
+	experience: number;
+	health: number;
+	score: number;
+	maxHealth: number;
+}

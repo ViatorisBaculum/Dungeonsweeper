@@ -1,4 +1,4 @@
-import { CellType } from "../util/customTypes";
+import { CellType, PlayerState } from "../util/customTypes";
 import defaults from "../util/defaults";
 import { GameMaster } from "./gameMaster";
 
@@ -25,6 +25,27 @@ export abstract class Player {
 	constructor() {
 		this._HTMLHooks = this.loadHTMLHooks();
 	}
+
+	public saveState(): PlayerState {
+		return {
+			className: this.className,
+			level: this._level,
+			experience: this._experience,
+			health: this._health,
+			score: this._score,
+			maxHealth: this.maxHealth
+		};
+	}
+
+	public loadState(state: PlayerState) {
+		this._level = state.level;
+		this._experience = state.experience;
+		this.maxHealth = state.maxHealth;
+		this._health = state.health;
+		this._score = state.score;
+		this.updateStatsheet();
+	}
+
 	/*=================*/
 	/*getters & setters*/
 	/*=================*/

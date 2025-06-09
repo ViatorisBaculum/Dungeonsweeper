@@ -4,23 +4,28 @@ import { CellType } from "../../util/customTypes";
 import { resetFireballButton } from "../../content";
 
 export class PC_Mage extends Player {
-	className = "Mage";
-	private fireballAvailable = true;
+	className: "Mage" = "Mage";
+	public fireballAvailable = true;
 	public isFireballModeActive: boolean = false;
-	private board: Board;
+	private board?: Board;
 
-	constructor(board: Board | undefined) {
+	constructor(board?: Board) {
 		super();
-		if (!board) {
-			throw new Error("PC_Mage requires a Board instance during construction.");
+		if (board) {
+			this.board = board;
 		}
-		this.health = 2;
-		this.maxHealth = this.health;
+		this.health = 3;
+		this.maxHealth = 3;
+	}
+
+	public setBoard(board: Board) {
 		this.board = board;
 	}
 
 	public canCastFireball(): boolean {
-		return this.fireballAvailable;
+		return !this.isFireballModeActive;
+
+		//return this.level >= 2 && !this.isFireballModeActive;
 	}
 
 	private consumeFireballCharge(): void {
@@ -49,9 +54,9 @@ export class PC_Mage extends Player {
 	}
 
 	public castFireballOnCell(x: number, y: number): void {
-		if (!this.isFireballModeActive) {
-			return;
-		}
+		if (!this.board) return;
+
+		console.log(`Mage used Fireball at ${x},${y}`);
 
 		for (let dx = -1; dx <= 1; dx++) {
 			for (let dy = -1; dy <= 1; dy++) {

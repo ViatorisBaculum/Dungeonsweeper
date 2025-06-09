@@ -86,7 +86,12 @@ export class GameMaster {
 	/*public methods*/
 	/*==============*/
 	public createBoard() {
-		this.board = new Board(this._gameSettings.width, this._gameSettings.height, this._gameSettings.minesFrequency, this);
+		this.board = new Board(
+			this._gameSettings.width,
+			this._gameSettings.height,
+			this._gameSettings.minesFrequency,
+			this
+		);
 	}
 
 	public createPlayer() {
@@ -189,6 +194,7 @@ export class GameMaster {
 		if (document.getElementById("modal")) this.getScores();
 		this.createBoard();
 		this.createPlayer();
+		this.board.indicateLevelGain(this.player.level);
 		this._board?.openStartArea();
 
 		this.resetTimer();
@@ -263,6 +269,7 @@ export class GameMaster {
 		this.board.revealBoard();
 		this.board.removeEventHandler();
 		this._gameState = GameState.Ended;
+		this.clearSavedGame();
 	}
 
 	private getValueFromInput(name: string) {
@@ -312,5 +319,75 @@ export class GameMaster {
 	private resetHeartContainer() {
 		const hearts = document.getElementById("health");
 		if (hearts) hearts.innerHTML = "";
+	}
+
+	// === Speicher- und Ladefunktionen für Spielstand ===
+	public saveGameState(): void {
+		if (this._gameState !== GameState.Running && this._gameState !== GameState.Paused) return;
+		if (!this._board || !this._player) return;
+
+		const saveData = {
+			board: this._board.saveState(),
+			player: this._player.saveState(),
+			timer: this._gameTimer,
+			settings: this._gameSettings
+		};
+		localStorage.setItem("dungeonsweeper_save", JSON.stringify(saveData));
+	}
+
+	public hasSavedGame(): boolean {
+		return !!localStorage.getItem("dungeonsweeper_save");
+	}
+
+	public loadGameState(): boolean {
+		const save = localStorage.getItem("dungeonsweeper_save");
+		if (!save) return false;
+		try {
+			const saveData = JSON.parse(save);
+
+			// Settings
+			this._gameSettings = saveData.settings;
+
+			// Player
+			this.createPlayer();
+			this._player!.loadState(saveData.player);
+
+			// Board
+			this.board = new Board(
+				this._gameSettings.width,
+				this._gameSettings.height,
+				this._gameSettings.minesFrequency,
+				this,
+				saveData.board
+			);
+
+			// Link board to mage if needed
+			if (this._player!.className === "Mage") {
+				(this._player as PC_Mage).setBoard(this.board);
+			}
+
+			// Timer
+			this._gameTimer = saveData.timer || 0;
+
+			// UI aktualisieren
+			this._board?.cells.flat().forEach(cell => {
+				if (cell.isClicked) {
+					cell.revealCell();
+				} else if (cell.isFlagged) {
+					cell.toggleFlag();
+				}
+			});
+			this.board.indicateLevelGain(this.player.level);
+			this._gameState = GameState.Running;
+			this._timer = setInterval(() => this.countSeconds(), 1000);
+			return true;
+		} catch (e) {
+			console.error("Fehler beim Laden des Spielstands:", e);
+			return false;
+		}
+	}
+
+	public clearSavedGame(): void {
+		localStorage.removeItem("dungeonsweeper_save");
 	}
 }

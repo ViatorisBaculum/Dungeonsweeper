@@ -1,4 +1,4 @@
-import { typeDistribution, CellType } from "../util/customTypes";
+import { typeDistribution, CellType, SavedCell } from "../util/customTypes";
 import defaults from "../util/defaults";
 import { Cell } from "./cell";
 import { GameMaster } from "./gameMaster";
@@ -16,10 +16,14 @@ export class Board {
 	private clickHandler: (e: MouseEvent) => void;
 	private contextMenuHandler: (e: MouseEvent) => void;
 
-	constructor(width: number, height: number, minesFreq: number, gameMaster: GameMaster, distribution: typeDistribution = defaults.typeDistribution) {
-		this.validateDistribution(distribution);
+	constructor(
+		width: number,
+		height: number,
+		minesFreq: number,
+		gameMaster: GameMaster,
+		config?: typeDistribution | SavedCell[][]
+	) {
 		this.gameInstance = gameMaster;
-
 		this._minesFrequency = minesFreq;
 		this._width = width;
 		this._height = height;
@@ -27,21 +31,43 @@ export class Board {
 		const app = document.getElementById("app");
 		if (!app) throw new Error("board: No #app div found");
 		this.appElement = app;
+		this.appElement.innerHTML = ""; // Clear board content
 
-		this.fillBoard(distribution);
+		if (config && Array.isArray(config)) {
+			// Load from state if config is a SavedCell array
+			this.loadFromState(config);
+		} else {
+			// Create new board otherwise
+			const distribution = config || defaults.typeDistribution;
+			this.validateDistribution(distribution);
+			this.fillBoard(distribution);
+			this.determineCellValues();
+		}
 
-		this.determineCellValues();
 		this.updateCSSVariables(width, height);
 
 		this.clickHandler = this.createClickHandler();
 		this.contextMenuHandler = this.createContextMenuHandler();
 		this.addBoardEventHandlers();
-		this.indicateLevelGain(1);
 	}
 
 	/*==============*/
 	/*public methods*/
 	/*==============*/
+
+	public indicateLevelGain(level: number) {
+		if (this.appElement) {
+			// reset existing level classes
+			for (let i = 1; i <= 5; i++) {
+				this.appElement.classList.remove(`level-${i}`);
+			}
+			this.appElement.classList.add(`level-${level}`);
+
+			this.appElement.classList.remove("highlight");
+			void this.appElement.offsetWidth;
+			this.appElement.classList.add("highlight");
+		}
+	}
 
 	evoluteMonster() {
 		const remainingMonster = this.getRemainingMonster();
@@ -66,20 +92,6 @@ export class Board {
 
 	getCellType(i: number, j: number): CellType {
 		return this.getCell(i, j) ? this.cells[i][j].type : CellType.Empty;
-	}
-
-	public indicateLevelGain(level: number) {
-		if (this.appElement) {
-			// reset existing level classes
-			for (let i = 1; i <= 5; i++) {
-				this.appElement.classList.remove(`level-${i}`);
-			}
-			this.appElement.classList.add(`level-${level}`);
-
-			this.appElement.classList.remove("highlight");
-			void this.appElement.offsetWidth;
-			this.appElement.classList.add("highlight");
-		}
 	}
 
 	public openStartArea() {
@@ -117,6 +129,43 @@ export class Board {
 				if (cell.isFlagged) cell.isFlagged = false;
 			}
 		});
+	}
+
+	public saveState(): SavedCell[][] {
+		return this.cells.map(row => row.map(cell => cell.saveState()));
+	}
+
+	static fromState(boardState: any[][], gameMaster: GameMaster): Board {
+		const height = boardState.length;
+		const width = boardState[0]?.length || 0;
+		// Dummy-Parameter für den Konstruktor, werden gleich überschrieben
+		const board = new Board(width, height, 0, gameMaster);
+		// Leere Zellen-Struktur überschreiben
+		board.cells = [];
+		for (let i = 0; i < height; i++) {
+			board.cells[i] = [];
+			for (let j = 0; j < width; j++) {
+				const cellData = boardState[i][j];
+				const HTMLElement = document.createElement("button");
+				HTMLElement.dataset.x = i.toString();
+				HTMLElement.dataset.y = j.toString();
+				const cell = new Cell(
+					cellData.type,
+					board,
+					i,
+					j,
+					HTMLElement,
+					gameMaster,
+					cellData.value
+				);
+				cell.isClicked = cellData.isClicked;
+				cell.isFlagged = cellData.isFlagged;
+				board.cells[i][j] = cell;
+				board.appElement.appendChild(HTMLElement);
+			}
+		}
+		board.addBoardEventHandlers();
+		return board;
 	}
 
 	/*===============*/
@@ -284,6 +333,33 @@ export class Board {
 	private addBoardEventHandlers() {
 		this.appElement.addEventListener("click", this.clickHandler);
 		this.appElement.addEventListener("contextmenu", this.contextMenuHandler);
+	}
+
+	private loadFromState(state: SavedCell[][]) {
+		const fragment = document.createDocumentFragment();
+		for (let i = 0; i < this._height; i++) {
+			this.cells[i] = [];
+			for (let j = 0; j < this._width; j++) {
+				const cellData = state[i][j];
+				const HTMLElement = document.createElement("button");
+				HTMLElement.dataset.x = i.toString();
+				HTMLElement.dataset.y = j.toString();
+				const cell = new Cell(
+					cellData.type,
+					this,
+					i,
+					j,
+					HTMLElement,
+					this.gameInstance,
+					cellData.value
+				);
+				cell.isClicked = cellData.isClicked;
+				cell.isFlagged = cellData.isFlagged;
+				this.cells[i].push(cell);
+				fragment.appendChild(HTMLElement);
+			}
+		}
+		this.appElement.appendChild(fragment);
 	}
 
 	/*===============*/

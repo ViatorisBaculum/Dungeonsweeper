@@ -1,6 +1,6 @@
 import { Board } from "./board";
 import { GameMaster } from "./gameMaster";
-import { CellType } from "../util/customTypes";
+import { CellType, SavedCell } from "../util/customTypes";
 import defaults from "../util/defaults";
 
 export class Cell {
@@ -30,6 +30,15 @@ export class Cell {
 		this.HTMLElement = htmlElement;
 		this.gameInstance = gameMaster;
 		this.value = value;
+	}
+
+	public saveState(): SavedCell {
+		return {
+			type: this.type,
+			value: this.value,
+			isClicked: this.isClicked,
+			isFlagged: this.isFlagged
+		};
 	}
 
 	/*==============*/
@@ -153,7 +162,6 @@ export class Cell {
 	}
 
 	revealCell() {
-		if (this.isClicked) return;
 		this.isClicked = true;
 		this.animateReveal();
 

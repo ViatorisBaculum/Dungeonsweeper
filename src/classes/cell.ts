@@ -169,10 +169,10 @@ export class Cell {
 		return false;
 	}
 
-	revealCell() {
+	revealCell(skipAnimations = false) {
 		if (this.isClicked) return;
 		this.isClicked = true;
-		this.animateReveal();
+		this.animateReveal(skipAnimations);
 		this.updateVisuals();
 	}
 
@@ -225,8 +225,8 @@ export class Cell {
 		}
 	}
 
-	private animateReveal() {
-		if (this.HTMLElement.checkVisibility()) {
+	private animateReveal(skipAnimations = false) {
+		if (!skipAnimations && this.HTMLElement.checkVisibility()) {
 			this.HTMLElement.classList.remove("shrinked");
 			this.HTMLElement.classList.add("shrinked");
 

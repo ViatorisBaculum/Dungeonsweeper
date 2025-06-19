@@ -128,11 +128,11 @@ export class Board {
 		});
 	}
 
-	public revealBoard() {
+	public revealBoard(skipAnimations = false) {
 		this.cells.flat().forEach((cell: Cell) => {
 			if (!cell.isClicked) {
 				cell.HTMLElement.classList.add("notClicked");
-				cell.revealCell();
+				cell.revealCell(skipAnimations);
 				if (cell.isFlagged) cell.isFlagged = false;
 			}
 		});
